@@ -1,0 +1,7 @@
+DROP TABLE IF EXISTS `orders`;
+CREATE TABLE `delievery`.`orders` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `distance` INT NOT NULL,
+  `status` VARCHAR(16) NOT NULL DEFAULT 'UNASSIGNED',
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `id_UNIQUE` (`id` ASC));

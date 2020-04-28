@@ -1,0 +1,45 @@
+version: "2"
+services:
+  delievery:
+    image: golang:alpine
+    container_name: delievery
+    working_dir: /go/src/github.com/lokmannicholas/delievery
+    command: go run main.go
+    volumes:
+      - .:/go/src/github.com/lokmannicholas/delievery
+    environment:
+      MAP_API_KEY: ''
+      MYSQL_ADDR: 'delievery-mysql:3306'
+      MYSQL_USER: 'delievery'
+      MYSQL_PASSWORD: 'delievery'
+      MYSQL_DB: 'delievery'
+      PORT: '8080'
+    ports:
+      - "8080:8080"
+    networks:
+      - default
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:5.7
+    container_name: delievery-mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: delievery
+      MYSQL_USER: delievery
+      MYSQL_PASSWORD: delievery
+      MYSQL_ROOT_PASSWORD: delievery
+    ports:
+      - '3306'
+    volumes:
+      - delievery-mysql:/var/lib/mysql
+      - ./migration/v1.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+
+networks:
+  default:
+    external:
+      name: delievery
+
+volumes:
+  delievery-mysql:
