@@ -10,6 +10,22 @@ import (
 	"github.com/lokmannicholas/delivery/pkg/config"
 )
 
+type DistanceFounder interface {
+	CountDistance(start, end []string) int
+}
+
+type DistanceFounderImp struct {
+	apiKey  string
+	rootUrl string
+}
+
+func GetDistanceFounder() DistanceFounder {
+	return &DistanceFounderImp{
+		rootUrl: "https://maps.googleapis.com/maps/api",
+		apiKey:  config.Get().MapApiKey,
+	}
+}
+
 type DistanceResponse struct {
 	DestinationAddresses []string `json:"destination_addresses"`
 	OriginAddresses      []string `json:"origin_addresses"`
@@ -33,12 +49,13 @@ type DistanceResponse struct {
 	Status string `json:"status"`
 }
 
-func CountDistance(start, end []string) int {
+func (d *DistanceFounderImp) CountDistance(start, end []string) int {
 
-	url := fmt.Sprintf(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=%s,%s&destinations=%s,%s&mode=driving&language=en&departure_time=now&key=%s`,
+	url := fmt.Sprintf(`%s/distancematrix/json?origins=%s,%s&destinations=%s,%s&mode=driving&language=en&departure_time=now&key=%s`,
+		d.rootUrl,
 		start[0], start[1],
 		end[0], end[1],
-		config.Get().MapApiKey)
+		d.apiKey)
 	res, err := http.Get(url)
 
 	if err != nil {

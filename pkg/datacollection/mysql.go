@@ -12,25 +12,30 @@ import (
 	"github.com/lokmannicholas/delivery/pkg/config"
 )
 
-var mysql *MySQLHelper
+var mysql *MySQLHelperImp
 
-type MySQLHelper struct {
-	DB *sql.DB
+type MySQLHelper interface {
+	DB() *sql.DB
+	Tx(ctx context.Context, f func(db *sql.Tx) error) (err error)
+	Close()
+}
+type MySQLHelperImp struct {
+	db *sql.DB
 }
 
 //TODO: remove this function to prevent potential connection deadlock
-func GetMySQLHelper() *MySQLHelper {
+func GetMySQLHelper() *MySQLHelperImp {
 	if mysql == nil {
 		mysql = mySQLConnect()
 	} else {
-		if err := mysql.DB.Ping(); err != nil {
+		if err := mysql.db.Ping(); err != nil {
 			mysql = mySQLConnect()
 		}
 	}
 	return mysql
 }
 
-func mySQLConnect() *MySQLHelper {
+func mySQLConnect() *MySQLHelperImp {
 	mysqlConf := config.Get().Mysql
 	//user:password@/dbname?charset=utf8&parseTime=True&loc=Local
 	uri := fmt.Sprintf("%s:%s@%s(%s)/%s%s",
@@ -42,15 +47,15 @@ func mySQLConnect() *MySQLHelper {
 	db.SetMaxIdleConns(20)
 	db.SetConnMaxLifetime(2 * time.Minute)
 
-	return &MySQLHelper{
-		DB: db,
+	return &MySQLHelperImp{
+		db: db,
 	}
 }
 
 //Tx Begin Transaction
 //TODO: remove this function to prevent potential connection deadlock
-func (my *MySQLHelper) Tx(ctx context.Context, f func(db *sql.Tx) error) (err error) {
-	tx, err := my.DB.BeginTx(ctx, &sql.TxOptions{
+func (my *MySQLHelperImp) Tx(ctx context.Context, f func(db *sql.Tx) error) (err error) {
+	tx, err := my.db.BeginTx(ctx, &sql.TxOptions{
 		Isolation: 0,
 		ReadOnly:  false,
 	})
@@ -73,7 +78,6 @@ func (my *MySQLHelper) Tx(ctx context.Context, f func(db *sql.Tx) error) (err er
 			}
 		}
 	}()
-
 	err = f(tx)
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
@@ -84,6 +88,9 @@ func (my *MySQLHelper) Tx(ctx context.Context, f func(db *sql.Tx) error) (err er
 		return tx.Commit()
 	}
 }
-func (my *MySQLHelper) Close() {
-	_ = my.DB.Close()
+func (my *MySQLHelperImp) DB() *sql.DB {
+	return my.db
+}
+func (my *MySQLHelperImp) Close() {
+	_ = my.db.Close()
 }
