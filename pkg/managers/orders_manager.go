@@ -1,7 +1,6 @@
 package managers
 
 import (
-	"context"
 	"errors"
 	"strconv"
 
@@ -14,9 +13,9 @@ import (
 )
 
 type OrdersManager interface {
-	PlaceOrder(ctx context.Context, startCor, EndCor []string) (*models.Orders, error)
-	TakeOrder(ctx context.Context, id int64) (*models.Orders, error)
-	GetOrders(ctx context.Context, page, limit uint64) ([]*models.Orders, error)
+	PlaceOrder(startCor, EndCor []string) (*models.Orders, error)
+	TakeOrder(id int64) (*models.Orders, error)
+	GetOrders(page, limit uint64) ([]*models.Orders, error)
 }
 
 type OrdersManagerImp struct {
@@ -33,7 +32,7 @@ func GetOrdersManager() OrdersManager {
 	}
 }
 
-func (m *OrdersManagerImp) PlaceOrder(ctx context.Context, startCor, endCor []string) (*models.Orders, error) {
+func (m *OrdersManagerImp) PlaceOrder(startCor, endCor []string) (*models.Orders, error) {
 	//validate latitude and longitude value of coordinates
 	if len(startCor) < 2 || len(endCor) < 2 {
 		return nil, errors.New("incorrect coordinate")
@@ -71,12 +70,12 @@ func (m *OrdersManagerImp) PlaceOrder(ctx context.Context, startCor, endCor []st
 	return m.OrdersRepo.Insert(db, dis)
 }
 
-func (m *OrdersManagerImp) TakeOrder(ctx context.Context, id int64) (*models.Orders, error) {
+func (m *OrdersManagerImp) TakeOrder(id int64) (*models.Orders, error) {
 	db := m.MySqlHelper.DB()
 	return m.OrdersRepo.UpdateById(db, id)
 }
 
-func (m *OrdersManagerImp) GetOrders(ctx context.Context, page, limit uint64) ([]*models.Orders, error) {
+func (m *OrdersManagerImp) GetOrders(page, limit uint64) ([]*models.Orders, error) {
 	db := m.MySqlHelper.DB()
 	return m.OrdersRepo.Find(db, page, limit)
 }

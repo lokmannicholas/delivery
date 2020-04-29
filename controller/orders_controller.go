@@ -14,10 +14,13 @@ type OrderController interface {
 	OrderList(c *gin.Context)
 }
 type OrderControllerImp struct {
+	OrdersManager managers.OrdersManager
 }
 
 func GetOrderController() OrderController {
-	return &OrderControllerImp{}
+	return &OrderControllerImp{
+		OrdersManager: managers.GetOrdersManager(),
+	}
 }
 
 func (ctl *OrderControllerImp) PlaceOrder(c *gin.Context) {
@@ -36,7 +39,7 @@ func (ctl *OrderControllerImp) PlaceOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ord, err := managers.GetOrdersManager().PlaceOrder(c, request.Origin, request.Destination)
+	ord, err := ctl.OrdersManager.PlaceOrder(request.Origin, request.Destination)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -65,7 +68,7 @@ func (ctl *OrderControllerImp) TakeOrder(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "incorrect id"})
 			return
 		}
-		ord, err := managers.GetOrdersManager().TakeOrder(c, id)
+		ord, err := ctl.OrdersManager.TakeOrder(id)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -96,7 +99,7 @@ func (ctl *OrderControllerImp) OrderList(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "limit should be number"})
 		return
 	}
-	ords, err := managers.GetOrdersManager().GetOrders(c, uint64(page), uint64(limit))
+	ords, err := ctl.OrdersManager.GetOrders(uint64(page), uint64(limit))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

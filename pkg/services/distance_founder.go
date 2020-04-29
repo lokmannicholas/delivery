@@ -6,9 +6,14 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/lokmannicholas/delivery/pkg/config"
 )
+
+type HttpClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
 
 type DistanceFounder interface {
 	CountDistance(start, end []string) int
@@ -17,36 +22,38 @@ type DistanceFounder interface {
 type DistanceFounderImp struct {
 	apiKey  string
 	rootUrl string
+	client  HttpClient
 }
 
 func GetDistanceFounder() DistanceFounder {
 	return &DistanceFounderImp{
 		rootUrl: "https://maps.googleapis.com/maps/api",
 		apiKey:  config.Get().MapApiKey,
+		client: &http.Client{
+			Timeout: time.Second * 10,
+		},
 	}
 }
 
 type DistanceResponse struct {
 	DestinationAddresses []string `json:"destination_addresses"`
 	OriginAddresses      []string `json:"origin_addresses"`
-	Rows                 []struct {
-		Elements []struct {
-			Distance struct {
-				Text  string `json:"text"`
-				Value int    `json:"value"`
-			} `json:"distance"`
-			Duration struct {
-				Text  string `json:"text"`
-				Value int    `json:"value"`
-			} `json:"duration"`
-			DurationInTraffic struct {
-				Text  string `json:"text"`
-				Value int    `json:"value"`
-			} `json:"duration_in_traffic"`
-			Status string `json:"status"`
-		} `json:"elements"`
-	} `json:"rows"`
-	Status string `json:"status"`
+	Rows                 []Row    `json:"rows"`
+	Status               string   `json:"status"`
+}
+type Row struct {
+	Elements []Element `json:"elements"`
+}
+
+type Element struct {
+	Distance          ElementsInfo `json:"distance"`
+	Duration          ElementsInfo `json:"duration"`
+	DurationInTraffic ElementsInfo `json:"duration_in_traffic"`
+	Status            string       `json:"status"`
+}
+type ElementsInfo struct {
+	Text  string `json:"text"`
+	Value int    `json:"value"`
 }
 
 func (d *DistanceFounderImp) CountDistance(start, end []string) int {
@@ -56,7 +63,12 @@ func (d *DistanceFounderImp) CountDistance(start, end []string) int {
 		start[0], start[1],
 		end[0], end[1],
 		d.apiKey)
-	res, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	res, err := d.client.Do(req)
 
 	if err != nil {
 		fmt.Println(err)
